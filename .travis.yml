@@ -1,0 +1,7 @@
+language: go
+go:
+  - master
+install:
+  - go get golang.org/x/tools/cmd/cover
+script:
+  - go test -v -covermode=count -coverprofile=coverage.out ./...
