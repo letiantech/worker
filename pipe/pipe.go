@@ -28,7 +28,7 @@ import (
 
 	"github.com/letiantech/worker/job"
 
-	"github.com/pkg/errors"
+	"errors"
 )
 
 const (
