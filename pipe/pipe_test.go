@@ -20,63 +20,67 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-package producer
+package pipe
 
 import (
-	"net/http"
 	"sync"
 	"testing"
 
 	"github.com/letiantech/worker/job"
-	"github.com/letiantech/worker/limiter"
 )
 
-func TestLimitedProducer(t *testing.T) {
-	lmt := limiter.NewLimiter(1)
-	p := NewLimitedProducer(NewProducer(10), lmt, nil)
-	req, _ := http.NewRequest(http.MethodGet, "http://www.baidu.com", nil)
-	j := job.NewHttpJob(req)
-	wg := &sync.WaitGroup{}
+func testPipe(r Receiver, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
-		j1 := p.GetJob()
+		defer wg.Done()
+		j1 := r.Recv()
+		if j1 == nil {
+			return
+		}
 		j1.Do()
 		j1.Finish()
-		wg.Done()
 	}()
-	_ = p.PushJob(j)
+}
+
+func TestPipe_Size1(t *testing.T) {
+	p := NewPipe(1)
+	s := Sender(p)
+	c := Closer(p)
+	wg := &sync.WaitGroup{}
+	testPipe(p, wg)
+	_ = s.Send(job.DummyJob())
+	c.Close()
 	wg.Wait()
 }
 
-func TestLimitedOutputProducer(t *testing.T) {
-	lmt := limiter.NewLimiter(1)
-	p := NewProducer(10)
-	lop := NewLimitedOutputProducer(p, lmt)
+func TestPipe_Size10(t *testing.T) {
+	p := NewPipe(10)
+	s := Sender(p)
+	c := Closer(p)
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		j1 := lop.GetJob()
-		j1.Do()
-		j1.Finish()
-		wg.Done()
-	}()
-	_ = p.PushJob(&job.DummyJob{})
+	testPipe(p, wg)
+	_ = s.Send(job.DummyJob())
 	wg.Wait()
-	p.Close()
+	c.Close()
 }
 
-func TestLimitedInputProducer(t *testing.T) {
-	lmt := limiter.NewLimiter(1)
-	p := NewProducer(10)
-	lip := NewLimitedInputProducer(p, lmt)
+func TestPipe_Close(t *testing.T) {
+	p := NewPipe(10)
+	s := Sender(p)
+	c := Closer(p)
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		j1 := p.GetJob()
-		j1.Do()
-		j1.Finish()
-		wg.Done()
-	}()
-	_ = lip.PushJob(&job.DummyJob{})
+	testPipe(p, wg)
+	c.Close()
+	err := s.Send(job.DummyJob())
+	if err == ErrPipeClosed {
+	}
 	wg.Wait()
+}
+
+func TestDummyPipe(t *testing.T) {
+	dp := DummyPipe()
+	j := job.DummyJob()
+	_ = dp.Send(j)
+	dp.Recv()
+	dp.Close()
 }

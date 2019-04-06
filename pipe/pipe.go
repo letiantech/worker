@@ -20,7 +20,7 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-package producer
+package pipe
 
 import (
 	"sync"
@@ -32,39 +32,41 @@ import (
 )
 
 const (
-	MinProducerSize = 10
+	MinSize = 10
 )
 
-var ErrProducerClosed = errors.New("producer is closed")
+var ErrPipeClosed = errors.New("pipe is closed")
 
-type Producer interface {
-	PushJob(j job.Job) error
-	GetJob() job.Job
+type Closer interface {
 	Close()
 }
 
-type InputProducer interface {
-	PushJob(j job.Job) error
-	Close()
+type Pipe interface {
+	Sender
+	Receiver
+	Closer
 }
 
-type OutputProducer interface {
-	GetJob() job.Job
-	Close()
+type Sender interface {
+	Send(j job.Job) error
 }
 
-type producer struct {
+type Receiver interface {
+	Recv() job.Job
+}
+
+type pipe struct {
 	jobs    chan job.Job
 	running int32
 	wg      *sync.WaitGroup
 	o       *sync.Once
 }
 
-func NewProducer(size int) Producer {
-	if size < MinProducerSize {
-		size = MinProducerSize
+func NewPipe(size int) Pipe {
+	if size < MinSize {
+		size = MinSize
 	}
-	p := &producer{
+	p := &pipe{
 		jobs:    make(chan job.Job, size),
 		running: 1,
 		wg:      &sync.WaitGroup{},
@@ -73,23 +75,23 @@ func NewProducer(size int) Producer {
 	return p
 }
 
-// 将一个Job推送到Producer的队列里
-func (p *producer) PushJob(j job.Job) error {
+// 将一个Job推送到Pipe的队列里
+func (p *pipe) Send(j job.Job) error {
 	if atomic.LoadInt32(&p.running) > 0 {
 		p.wg.Add(1)
 		p.jobs <- j
 		p.wg.Done()
 		return nil
 	}
-	return ErrProducerClosed
+	return ErrPipeClosed
 }
 
-func (p *producer) GetJob() job.Job {
+func (p *pipe) Recv() job.Job {
 	j := <-p.jobs
 	return j
 }
 
-func (p *producer) Close() {
+func (p *pipe) Close() {
 	p.o.Do(func() {
 		if atomic.CompareAndSwapInt32(&p.running, 1, 0) {
 			atomic.StoreInt32(&p.running, 0)
@@ -99,4 +101,24 @@ func (p *producer) Close() {
 			}()
 		}
 	})
+}
+
+func DummyPipe() Pipe {
+	return &dummy{
+		j: job.DummyJob(),
+	}
+}
+
+type dummy struct {
+	j job.Job
+}
+
+func (dp *dummy) Send(j job.Job) error {
+	return nil
+}
+func (dp *dummy) Recv() job.Job {
+	return dp.j
+}
+func (dp *dummy) Close() {
+	dp.j = nil
 }

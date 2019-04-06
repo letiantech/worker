@@ -93,14 +93,18 @@ func (l *limiter) Speed() float64 {
 	return float64(atomic.LoadInt64(&l.speed)) / 1000.0
 }
 
-type DummyLimiter struct{}
+func DummyLimiter() Limiter {
+	return &dummyLimiter{}
+}
 
-func (dl *DummyLimiter) Update() time.Duration {
+type dummyLimiter struct{}
+
+func (dl *dummyLimiter) Update() time.Duration {
 	return 0
 }
-func (dl *DummyLimiter) SetSpeed(speed float64) {
+func (dl *dummyLimiter) SetSpeed(speed float64) {
 
 }
-func (dl *DummyLimiter) Speed() float64 {
+func (dl *dummyLimiter) Speed() float64 {
 	return 0
 }

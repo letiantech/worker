@@ -25,7 +25,7 @@ package worker
 import (
 	"sync"
 
-	"github.com/letiantech/worker/producer"
+	"github.com/letiantech/worker/pipe"
 )
 
 type Group interface {
@@ -33,23 +33,29 @@ type Group interface {
 }
 
 type group struct {
-	producer.OutputProducer
+	pipe.Receiver
+	pipe.Closer
 	workers []Worker
+	o       *sync.Once
 }
 
-func NewGroup(number int, creator func() Worker) Group {
+func NewGroup(number int, creator Creator) Group {
 	workers := make([]Worker, number)
 	for i := 0; i < number; i++ {
 		workers[i] = creator()
 	}
 	return &group{
+		Closer:  pipe.DummyPipe(),
 		workers: workers,
 	}
 }
 
-func (g *group) Start(p producer.OutputProducer) {
+func (g *group) Start(p pipe.Receiver, closer ...pipe.Closer) {
 	(&sync.Once{}).Do(func() {
-		g.OutputProducer = p
+		g.Receiver = p
+		if len(closer) > 0 {
+			g.Closer = closer[0]
+		}
 		for i := 0; i < len(g.workers); i++ {
 			g.workers[i].Start(p)
 		}

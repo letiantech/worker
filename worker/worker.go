@@ -26,24 +26,29 @@ import (
 	"log"
 	"sync"
 
+	"github.com/letiantech/worker/pipe"
+
 	"github.com/letiantech/worker/job"
-	"github.com/letiantech/worker/producer"
 )
 
 type Worker interface {
-	Start(p producer.OutputProducer)
-	Close()
+	Start(p pipe.Receiver, closer ...pipe.Closer)
+	pipe.Closer
 }
 
+type Creator func() Worker
+
 type worker struct {
-	producer.OutputProducer
+	pipe.Receiver
+	pipe.Closer
 	o *sync.Once
 }
 
 // 创建一个Worker，用于异步并发处理Job
 func NewWorker() Worker {
 	return &worker{
-		o: &sync.Once{},
+		Closer: pipe.DummyPipe(),
+		o:      &sync.Once{},
 	}
 }
 
@@ -59,12 +64,15 @@ func (w *worker) doJob(j job.Job) {
 }
 
 // 启动Worker，开始接受和执行 Job
-func (w *worker) Start(p producer.OutputProducer) {
+func (w *worker) Start(p pipe.Receiver, closer ...pipe.Closer) {
 	w.o.Do(func() {
-		w.OutputProducer = p
+		w.Receiver = p
+		if len(closer) > 0 {
+			w.Closer = closer[0]
+		}
 		go func() {
 			for {
-				j := w.GetJob()
+				j := w.Recv()
 				if j == nil {
 					break
 				}

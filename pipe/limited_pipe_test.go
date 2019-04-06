@@ -20,30 +20,46 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-package producer
+package pipe
 
 import (
-	"net/http"
 	"sync"
 	"testing"
 
 	"github.com/letiantech/worker/job"
+	"github.com/letiantech/worker/limiter"
 )
 
-func TestProducer(t *testing.T) {
-	p := NewProducer(10)
-	ip := InputProducer(p)
-	op := OutputProducer(p)
-	req, _ := http.NewRequest(http.MethodGet, "http://www.baidu.com", nil)
-	j := job.NewHttpJob(req)
+func TestLimitedPipe(t *testing.T) {
+	lmt1 := limiter.NewLimiter(1)
+	lmt2 := limiter.NewLimiter(1)
+	p := NewLimitedPipe(NewPipe(10), lmt1, lmt2)
+	s := Sender(p)
 	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		j1 := op.GetJob()
-		j1.Do()
-		j1.Finish()
-		wg.Done()
-	}()
-	_ = ip.PushJob(j)
+	testPipe(p, wg)
+	_ = s.Send(job.DummyJob())
 	wg.Wait()
+	p.Close()
+}
+
+func TestLimitedReceiver(t *testing.T) {
+	lmt := limiter.NewLimiter(1)
+	p := NewPipe(10)
+	r := NewLimitedReceiver(p, lmt)
+	wg := &sync.WaitGroup{}
+	testPipe(r, wg)
+	_ = p.Send(job.DummyJob())
+	wg.Wait()
+	p.Close()
+}
+
+func TestLimitedSender(t *testing.T) {
+	lmt := limiter.NewLimiter(1)
+	p := NewPipe(10)
+	s := NewLimitedSender(p, lmt)
+	wg := &sync.WaitGroup{}
+	testPipe(p, wg)
+	_ = s.Send(job.DummyJob())
+	wg.Wait()
+	p.Close()
 }

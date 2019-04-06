@@ -25,16 +25,17 @@ package worker
 import (
 	"testing"
 
+	"github.com/letiantech/worker/pipe"
+
 	"github.com/letiantech/worker/job"
-	"github.com/letiantech/worker/producer"
 )
 
 func TestGroup(t *testing.T) {
 	g := NewGroup(10, NewWorker)
-	p := producer.NewProducer(10)
-	g.Start(p)
+	p := pipe.NewPipe(10)
+	g.Start(p, p)
 	for i := 0; i < 100; i++ {
-		_ = p.PushJob(&job.DummyJob{})
+		_ = p.Send(job.DummyJob())
 	}
 	g.Close()
 }

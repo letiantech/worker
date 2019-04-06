@@ -73,3 +73,25 @@ func (j *httpJob) Do() {
 	ret.res, ret.err = http.DefaultClient.Do(j.req)
 	j.res <- ret
 }
+
+type dummyHttpJob struct {
+	ch chan struct{}
+}
+
+func DummyHttpJob() HttpJob {
+	return &dummyHttpJob{
+		ch: make(chan struct{}),
+	}
+}
+
+func (dhj *dummyHttpJob) Do() {
+}
+
+func (dhj *dummyHttpJob) Finish() {
+	close(dhj.ch)
+}
+
+func (dhj *dummyHttpJob) Wait() (*http.Response, error) {
+	<-dhj.ch
+	return nil, nil
+}

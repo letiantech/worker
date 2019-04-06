@@ -22,25 +22,10 @@
 
 package job
 
-// Job 接口用于为所有任务提供统一的方法
-// 开发者基于框架开发新功能时，定义的struct实现Job中定义的两个方法，就可以扔给worker来处理
-type Job interface {
-	// 使用者自行定义的任务执行函数，由Worker调用
-	Do()
-	// 使用者自行定义的任务执行完毕后需要Worker执行的函数
-	Finish()
-}
+import "testing"
 
-func DummyJob() Job {
-	return &dummyJob{}
-}
-
-type dummyJob struct{}
-
-func (dj *dummyJob) Do() {
-
-}
-
-func (dj *dummyJob) Finish() {
-
+func TestJob(t *testing.T) {
+	var j = DummyJob()
+	j.Do()
+	j.Finish()
 }

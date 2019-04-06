@@ -34,23 +34,25 @@ func TestLimiter(t *testing.T) {
 		speed float64
 		count int
 		exp   bool
+		sleep bool
 	}{
-		{-1, 100, false},
-		{20, 40, true},
-		{0.5, 2, true},
+		{-1, 100, false, true},
+		{20, 40, true, true},
+		{0.5, 2, true, true},
+		{0.00001, 1, false, false},
 	}
 	for _, v := range testParams {
-		testFunc(t, v.speed, v.count, v.exp)
+		testFunc(t, v.speed, v.count, v.exp, v.sleep)
 	}
 }
 
-func testFunc(t *testing.T, speed float64, count int, exp bool) {
+func testFunc(t *testing.T, speed float64, count int, exp bool, sleep bool) {
 	l := NewLimiter(speed)
 	start := time.Now().UnixNano()
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < count; i++ {
 		tm := l.Update()
-		if tm != 0 {
+		if tm != 0 && sleep {
 			time.Sleep(tm)
 		}
 	}
@@ -83,4 +85,11 @@ func TestLimiterConcurrency(t *testing.T) {
 	if int(tm) != int(float64(count)/l.Speed()) {
 		t.Fatal("failed", tm)
 	}
+}
+
+func TestDummyLimiter(t *testing.T) {
+	dl := DummyLimiter()
+	dl.SetSpeed(1)
+	dl.Update()
+	dl.Speed()
 }

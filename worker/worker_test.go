@@ -23,30 +23,24 @@
 package worker
 
 import (
-	"net/http"
 	"testing"
 	"time"
 
 	"github.com/letiantech/worker/job"
-	"github.com/letiantech/worker/producer"
+	"github.com/letiantech/worker/pipe"
 )
 
 func TestWorker(t *testing.T) {
 
 	total := 100
 	w := NewWorker()
-	p := producer.NewProducer(10)
-	w.Start(p)
+	p := pipe.NewPipe(10)
+	w.Start(p, p)
 	jobs := make([]job.HttpJob, total)
 	start := time.Now().UnixNano()
 	for i := 0; i < total; i++ {
-		req, err := http.NewRequest("GET", "http://www.baidu.com", nil)
-		if err != nil {
-			t.Fatal(err.Error())
-			return
-		}
-		jobs[i] = job.NewHttpJob(req)
-		_ = p.PushJob(jobs[i])
+		jobs[i] = job.DummyHttpJob()
+		_ = p.Send(jobs[i])
 	}
 	failedCount := 0
 	for i := 0; i < total; i++ {

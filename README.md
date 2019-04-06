@@ -6,7 +6,7 @@ A lightweight worker framework
 
 ## worker
 
-## producer
+## pipe
 
 ## limiter
 

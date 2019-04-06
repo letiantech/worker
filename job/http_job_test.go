@@ -24,30 +24,8 @@ package job
 
 import (
 	"net/http"
-	"sync"
 	"testing"
 )
-
-type DummyHttpJob struct {
-	ch chan struct{}
-}
-
-func (dhj *DummyHttpJob) Do() {
-	(&sync.Once{}).Do(func() {
-		dhj.ch = make(chan struct{})
-	})
-}
-
-func (dhj *DummyHttpJob) Finish() {
-	(&sync.Once{}).Do(func() {
-		close(dhj.ch)
-	})
-}
-
-func (dhj *DummyHttpJob) Wait() (*http.Response, error) {
-	<-dhj.ch
-	return nil, nil
-}
 
 func TestHttpJob(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, "http://www.baidu.com", nil)
@@ -56,9 +34,20 @@ func TestHttpJob(t *testing.T) {
 		job.Do()
 		job.Finish()
 	}()
-	resp, err := job.Wait()
+	_, err := job.Wait()
 	if err != nil {
 		t.Log(err)
 	}
-	t.Log("ok", resp.StatusCode)
+}
+
+func TestDummyHttpJob(t *testing.T) {
+	job := DummyHttpJob()
+	go func() {
+		job.Do()
+		job.Finish()
+	}()
+	_, err := job.Wait()
+	if err != nil {
+		t.Log(err)
+	}
 }
