@@ -31,6 +31,30 @@ type Job interface {
 	Finish()
 }
 
+type job struct {
+	do     func()
+	finish func()
+}
+
+func NewJob(do func(), finish func()) Job {
+	return &job{
+		do:     do,
+		finish: finish,
+	}
+}
+
+func (j *job) Do() {
+	if j.do != nil {
+		j.do()
+	}
+}
+
+func (j *job) Finish() {
+	if j.finish != nil {
+		j.finish()
+	}
+}
+
 func DummyJob() Job {
 	return &dummyJob{}
 }

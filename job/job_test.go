@@ -25,6 +25,20 @@ package job
 import "testing"
 
 func TestJob(t *testing.T) {
+	ch := make(chan struct{})
+	do := func() {
+		close(ch)
+	}
+	finish := func() {}
+	j := NewJob(do, finish)
+	go func() {
+		j.Do()
+		j.Finish()
+	}()
+	<-ch
+}
+
+func TestDummyJob(t *testing.T) {
 	var j = DummyJob()
 	j.Do()
 	j.Finish()
