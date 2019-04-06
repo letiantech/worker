@@ -38,6 +38,7 @@ func TestHttpJob(t *testing.T) {
 	if err != nil {
 		t.Log(err)
 	}
+	job.Wait()
 }
 
 func TestDummyHttpJob(t *testing.T) {

@@ -34,12 +34,32 @@ func TestLimitedPipe(t *testing.T) {
 	lmt1 := limiter.NewLimiter(1)
 	lmt2 := limiter.NewLimiter(1)
 	p := NewLimitedPipe(NewPipe(10), lmt1, lmt2)
+	if p == nil {
+		t.Fatal("is nil")
+	}
+	p.ReceiverLimiter()
+	p.SenderLimiter()
 	s := Sender(p)
 	wg := &sync.WaitGroup{}
 	testPipe(p, wg)
 	_ = s.Send(job.DummyJob())
 	wg.Wait()
 	p.Close()
+}
+
+func TestLimitedPipe_nil(t *testing.T) {
+	p := NewLimitedPipe(nil, nil, nil)
+	if p != nil {
+		t.Fatal("not nil")
+	}
+	s := NewLimitedSender(nil, nil)
+	if s != nil {
+		t.Fatal("not nil")
+	}
+	r := NewLimitedReceiver(nil, nil)
+	if r != nil {
+		t.Fatal("not nil")
+	}
 }
 
 func TestLimitedReceiver(t *testing.T) {

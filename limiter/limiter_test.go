@@ -23,6 +23,7 @@
 package limiter
 
 import (
+	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
@@ -61,6 +62,22 @@ func testFunc(t *testing.T, speed float64, count int, exp bool, sleep bool) {
 	if (int(tm) == int(float64(count)/l.Speed())) != exp {
 		t.Fatal("failed", tm)
 	}
+}
+
+func TestLimiterSleep(t *testing.T) {
+	l := NewLimiter(10)
+	for {
+		tm := l.Update()
+		if tm != 0 {
+			fmt.Println(tm)
+			time.Sleep(tm)
+			break
+		}
+	}
+	time.Sleep(time.Second / 8)
+	l.Update()
+	time.Sleep(time.Second / 2)
+	l.Update()
 }
 
 func TestLimiterConcurrency(t *testing.T) {

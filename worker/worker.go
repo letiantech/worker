@@ -74,6 +74,9 @@ func (w *worker) Start(p pipe.Receiver, closer ...pipe.Closer) {
 			for {
 				j := w.Recv()
 				if j == nil {
+					if w.Closer != nil {
+						w.Close()
+					}
 					break
 				}
 				w.doJob(j)

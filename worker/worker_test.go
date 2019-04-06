@@ -24,34 +24,34 @@ package worker
 
 import (
 	"testing"
-	"time"
 
 	"github.com/letiantech/worker/job"
 	"github.com/letiantech/worker/pipe"
 )
 
 func TestWorker(t *testing.T) {
-
-	total := 100
 	w := NewWorker()
 	p := pipe.NewPipe(10)
 	w.Start(p, p)
-	jobs := make([]job.HttpJob, total)
-	start := time.Now().UnixNano()
-	for i := 0; i < total; i++ {
-		jobs[i] = job.DummyHttpJob()
-		_ = p.Send(jobs[i])
+	ch1 := make(chan struct{})
+	do1 := func() {
+		close(ch1)
 	}
-	failedCount := 0
-	for i := 0; i < total; i++ {
-		_, err := jobs[i].Wait()
-		if err != nil {
-			failedCount++
-		}
+	finish1 := func() {
+		var s []int
+		s[1] = 1
 	}
+	_ = p.Send(job.NewJob(do1, finish1))
+	<-ch1
+
+	ch := make(chan struct{})
+	do := func() {
+		close(ch)
+	}
+	finish := func() {}
+	j := job.NewJob(do, finish)
+	_ = p.Send(j)
+	<-ch
+	p.Send(nil)
 	w.Close()
-	end := time.Now().UnixNano()
-	costTime := float32(end-start) / float32(time.Millisecond)
-	t.Log("total: ", total, ", failed: ", failedCount)
-	t.Log("cost time: ", costTime, "ms")
 }
